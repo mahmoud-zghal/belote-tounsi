@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Belote Tounsi</string>
+    <string name="default_game_url">http://10.0.2.15:8080</string>
+</resources>

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Belote Tounsi</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <section id="screen-menu" class="screen active">
+        <div class="panel menu-panel">
+          <h1>🃏 Belote Tounsi</h1>
+          <p class="muted">Play-style flow: menu → lobby → game</p>
+          <div class="menu-actions">
+            <button class="action primary" id="btn-menu-start">Start / Join Room</button>
+            <button class="action" id="btn-menu-settings">Settings</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-lobby" class="screen">
+        <div class="panel">
+          <div class="top-row">
+            <strong>Multiplayer Room</strong>
+            <button class="action" id="btn-lobby-back">Back to Menu</button>
+          </div>
+          <div id="lobby-controls" class="lobby-controls">
+            <input id="mp-name" placeholder="Your name" />
+            <button class="action primary" id="mp-create">Create Room</button>
+            <input id="mp-code" class="uppercase" placeholder="Room code" />
+            <select id="mp-seat">
+              <option value="">Any seat</option>
+              <option value="1">Seat 2</option>
+              <option value="2">Seat 3</option>
+              <option value="3">Seat 4</option>
+            </select>
+            <button class="action" id="mp-join">Join Room</button>
+            <button class="action primary" id="mp-start">Start (Host)</button>
+            <button class="action danger" id="mp-leave">Leave Room</button>
+          </div>
+          <div id="lobby-status" class="lobby-status" data-conn="connecting">Connecting to server<span class="loading-dots" aria-hidden="true"><span></span><span></span><span></span></span></div>
+          <div id="mp-events" class="mp-events" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="screen-settings" class="screen">
+        <div class="panel">
+          <div class="top-row">
+            <strong>Settings</strong>
+            <button class="action" id="btn-settings-back">Back</button>
+          </div>
+          <div class="settings-grid">
+            <label><input type="checkbox" id="stg-dark" checked /> Dark table theme</label>
+            <label><input type="checkbox" id="stg-sfx" checked /> Sound effects (UI-ready)</label>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-game" class="screen">
+        <header>
+          <h1>🃏 Belote Tounsi</h1>
+          <div id="scoreboard"></div>
+        </header>
+        <section class="panel panel-tight">
+          <div class="top-row">
+            <div id="game-live-note" class="muted">In game</div>
+            <button class="action" id="btn-game-lobby">Lobby</button>
+          </div>
+        </section>
+
+        <section class="guide" id="guide"></section>
+
+        <section class="table">
+          <div class="player-row top">
+            <div class="player" id="p2"></div>
+          </div>
+          <div class="mid">
+            <div class="player" id="p1"></div>
+            <div class="trick" id="trick"></div>
+            <div class="player" id="p3"></div>
+          </div>
+          <div class="player-row bottom">
+            <div class="player you" id="p0"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div id="phase"></div>
+          <div id="controls"></div>
+          <div id="log" class="log"></div>
+        </section>
+      </section>
+
+      <section id="screen-postgame" class="screen">
+        <div class="panel menu-panel">
+          <h2>Round Finished</h2>
+          <p id="postgame-summary" class="muted">Waiting summary…</p>
+          <div class="menu-actions">
+            <button class="action primary" id="btn-rematch">Rematch (Host)</button>
+            <button class="action" id="btn-postgame-lobby">Back to Lobby</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div id="modal" class="modal hidden" aria-hidden="true">
+      <div class="modal-card">
+        <h3 id="modal-title">Action</h3>
+        <p id="modal-sub"></p>
+        <div id="modal-content"></div>
+        <div class="modal-actions">
+          <button id="modal-close" class="action">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script src="ui-shell.js"></script>
+    <script src="multiplayer.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

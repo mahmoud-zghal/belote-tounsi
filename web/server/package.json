@@ -1,0 +1,19 @@
+{
+  "name": "belote-tounsi-server",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "test": "node --test test/engine.test.js",
+    "test:e2e": "node test/socket-e2e.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "nanoid": "^5.0.7"
+  }
+}
