@@ -10,6 +10,7 @@ import {
   playCard,
   settleTrick,
   legalCardsForSeat,
+  scoreRound,
 } from "./engine/game.js";
 
 const app = express();
@@ -41,6 +42,8 @@ function roomPublic(room) {
     started: room.started,
     turnSeat: room.game?.turnSeat ?? null,
     trickCount: room.game?.trickCount ?? 0,
+    scores: room.scores || [0, 0],
+    winnerTeam: room.winnerTeam ?? null,
   };
 }
 
@@ -70,6 +73,10 @@ function emitGameState(room) {
       contract: room.game.contract,
       bidding: room.game.bidding,
       coinche: room.game.coinche,
+      scores: room.scores || [0, 0],
+      roundScore: room.game.roundScore || [0, 0],
+      roundPoints: room.game.roundPoints || [0, 0],
+      result: room.game.result || null,
       room: roomPublic(room),
     });
   }
@@ -123,6 +130,8 @@ function createRoom(hostName, socketId) {
     ],
     started: false,
     game: null,
+    scores: [0, 0],
+    winnerTeam: null,
     createdAt: Date.now(),
     lastActivityAt: Date.now(),
   };
@@ -207,10 +216,18 @@ function maybeFinishGame(room) {
   const totalCards = room.game.hands.reduce((a, h) => a + h.length, 0);
   if (totalCards > 0) return;
 
+  const { roundScore } = scoreRound(room.game);
+  room.scores[0] += roundScore[0];
+  room.scores[1] += roundScore[1];
+
+  if (room.scores[0] >= 2000 || room.scores[1] >= 2000) {
+    room.winnerTeam = room.scores[0] >= 2000 ? 0 : 1;
+  }
+
   room.game.phase = "finished";
   room.status = "finished";
   room.started = false;
-  io.to(room.code).emit("game:finished", { room: roomPublic(room) });
+  io.to(room.code).emit("game:finished", { room: roomPublic(room), result: room.game.result, roundScore, totalScore: room.scores, winnerTeam: room.winnerTeam });
   scheduleRoomDestroy(room, FINISHED_DESTROY_MS, "finished-timeout");
 }
 
@@ -242,7 +259,7 @@ function maybeApplyTimeoutAction(room, seat) {
       if (res.trickCompleted) {
         io.to(room.code).emit("game:trick-winner", { seat: res.winnerSeat, trickCount: room.game.trickCount });
         setTimeout(() => {
-          settleTrick(room.game, res.winnerSeat);
+          settleTrick(room.game, res.winnerSeat, res.trickCards);
           maybeFinishGame(room);
           emitGameState(room);
           emitRoomUpdate(room);
@@ -339,6 +356,7 @@ io.on("connection", (socket) => {
     if (seat !== room.hostSeat) return cb?.({ ok: false, error: "HOST_ONLY" });
     if (room.seats.some((s) => !s)) return cb?.({ ok: false, error: "NEED_4_PLAYERS" });
     if (room.status !== "finished") return cb?.({ ok: false, error: "REMATCH_NOT_AVAILABLE" });
+    if (room.winnerTeam !== null) return cb?.({ ok: false, error: "MATCH_FINISHED_2000" });
 
     startGame(room);
     emitRoomUpdate(room);
@@ -396,7 +414,7 @@ io.on("connection", (socket) => {
     if (result.trickCompleted) {
       io.to(room.code).emit("game:trick-winner", { seat: result.winnerSeat, trickCount: room.game.trickCount });
       setTimeout(() => {
-        settleTrick(room.game, result.winnerSeat);
+        settleTrick(room.game, result.winnerSeat, result.trickCards);
         maybeFinishGame(room);
         emitGameState(room);
         emitRoomUpdate(room);

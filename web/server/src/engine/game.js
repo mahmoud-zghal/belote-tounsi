@@ -4,6 +4,9 @@ const RANKS = ["7", "8", "9", "J", "Q", "K", "10", "A"];
 const TRUMP_ORDER = ["J", "9", "A", "10", "K", "Q", "8", "7"];
 const NON_TRUMP_ORDER = ["A", "10", "K", "Q", "J", "9", "8", "7"];
 
+const TRUMP_POINTS = { J: 20, 9: 14, A: 11, "10": 10, K: 4, Q: 3, 8: 0, 7: 0 };
+const NON_TRUMP_POINTS = { A: 11, "10": 10, K: 4, Q: 3, J: 2, 9: 0, 8: 0, 7: 0 };
+
 export function teamOf(seat) {
   return seat % 2;
 }
@@ -37,6 +40,10 @@ export function createInitialGame() {
       allPassCount: 0,
     },
     coinche: null,
+    trickHistory: [],
+    roundPoints: [0, 0],
+    roundScore: [0, 0],
+    result: null,
   };
 }
 
@@ -253,14 +260,85 @@ export function playCard(game, seat, cardId) {
   if (g.trick.length === 4) {
     g.trickCount += 1;
     const winnerSeat = trickWinnerSeat(g);
-    return { ok: true, card, trickCompleted: true, winnerSeat };
+    return { ok: true, card, trickCompleted: true, winnerSeat, trickCards: [...g.trick] };
   }
 
   g.turnSeat = (seat + 1) % 4;
   return { ok: true, card, trickCompleted: false };
 }
 
-export function settleTrick(game, winnerSeat) {
+export function settleTrick(game, winnerSeat, trickCards = null) {
+  const cards = trickCards || [...game.trick];
+  game.trickHistory.push({ winnerSeat, cards });
   game.trick = [];
   game.turnSeat = winnerSeat;
+}
+
+function cardPoints(card, trump) {
+  return card.suit === trump ? (TRUMP_POINTS[card.rank] ?? 0) : (NON_TRUMP_POINTS[card.rank] ?? 0);
+}
+
+function roundOppPoints(rawOpp, rawContract) {
+  if (rawOpp >= 21 && rawOpp <= 24) return { opp: 20, contractBonus: 0 };
+  if (rawOpp >= 25 && rawOpp <= 27) return { opp: 30, contractBonus: 10 };
+  if (rawOpp >= 28 && rawOpp <= 29) return { opp: 30, contractBonus: 0 };
+
+  const rounded = Math.max(0, Math.min(160, Math.round(rawOpp / 10) * 10));
+  const contractRounded = Math.max(0, Math.min(160, Math.round(rawContract / 10) * 10));
+  if (rounded + contractRounded !== 160) {
+    return { opp: rounded, contractBonus: Math.max(0, 160 - rounded - contractRounded) };
+  }
+  return { opp: rounded, contractBonus: 0 };
+}
+
+export function scoreRound(game) {
+  if (!game?.contract) return { roundScore: [0, 0], roundPoints: [0, 0], contractMade: false };
+
+  const trickPoints = [0, 0];
+  for (const t of game.trickHistory) {
+    const team = teamOf(t.winnerSeat);
+    for (const play of t.cards) trickPoints[team] += cardPoints(play.card, game.trump);
+  }
+
+  if (game.trickHistory.length) {
+    const lastWinnerTeam = teamOf(game.trickHistory[game.trickHistory.length - 1].winnerSeat);
+    trickPoints[lastWinnerTeam] += 10;
+  }
+
+  const total = Math.max(1, trickPoints[0] + trickPoints[1]);
+  const normalized = [
+    Math.round((trickPoints[0] * 160) / total),
+    160 - Math.round((trickPoints[0] * 160) / total),
+  ];
+
+  const contractTeam = teamOf(game.contract.by);
+  const oppTeam = 1 - contractTeam;
+  const contractValue = game.contract.value;
+  const multiplier = game.contract.multiplier || 1;
+
+  const contractMade = normalized[contractTeam] >= contractValue;
+  const roundScore = [0, 0];
+
+  if (!contractMade) {
+    roundScore[oppTeam] = 160 * multiplier;
+  } else {
+    const rounded = roundOppPoints(normalized[oppTeam], normalized[contractTeam]);
+    const oppScore = Math.max(0, Math.min(160, rounded.opp));
+    const contractScore = Math.max(0, 160 - oppScore + rounded.contractBonus);
+
+    roundScore[oppTeam] = oppScore * multiplier;
+    roundScore[contractTeam] = contractScore * multiplier;
+  }
+
+  game.roundPoints = normalized;
+  game.roundScore = roundScore;
+  game.result = {
+    contractTeam,
+    oppTeam,
+    contractMade,
+    contractValue,
+    multiplier,
+  };
+
+  return { roundScore, roundPoints: normalized, contractMade };
 }

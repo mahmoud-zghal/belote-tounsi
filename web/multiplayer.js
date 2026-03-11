@@ -55,6 +55,7 @@
       BAD_TOKEN: "Reconnect token expired/invalid. Join room again.",
       NOT_IN_ROOM: "You are not currently in a room.",
       REMATCH_NOT_AVAILABLE: "Rematch is available only after a finished game.",
+      MATCH_FINISHED_2000: "Match is finished (a team reached 2000). Create a new room for a new match.",
     };
     return map[code] || code || "Unknown error";
   }
