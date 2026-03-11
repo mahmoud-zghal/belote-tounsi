@@ -79,6 +79,7 @@ function emitGameState(room) {
       roundScore: room.game.roundScore || [0, 0],
       roundPoints: room.game.roundPoints || [0, 0],
       result: room.game.result || null,
+      seatNotes: room.game.seatNotes || ["", "", "", ""],
       room: roomPublic(room),
     });
   }

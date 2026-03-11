@@ -16,6 +16,7 @@ const state = {
   phase: "lobby",
   currentPlayer: null,
   leader: null,
+  seatNotes: ["", "", "", ""],
   lastMpBidPromptKey: null,
 };
 
@@ -53,22 +54,29 @@ function renderCardFace(c) {
   return `<img class="card-face" src="assets/cards/${cardCode(c)}.svg" alt="${cardText(c)}" />`;
 }
 
-function openModal(title, sub = "") {
+let modalLocked = false;
+
+function openModal(title, sub = "", opts = {}) {
+  modalLocked = !!opts.lock;
   el.modalTitle.textContent = title;
   el.modalSub.textContent = sub;
   el.modal.classList.remove("hidden");
   el.modal.setAttribute("aria-hidden", "false");
   el.modalContent.innerHTML = "";
+  el.modalClose.style.display = modalLocked ? "none" : "inline-flex";
 }
 
-function closeModal() {
+function closeModal(force = false) {
+  if (modalLocked && !force) return;
+  modalLocked = false;
   el.modal.classList.add("hidden");
   el.modal.setAttribute("aria-hidden", "true");
+  el.modalClose.style.display = "inline-flex";
 }
 
-el.modalClose.onclick = closeModal;
+el.modalClose.onclick = () => closeModal(false);
 el.modal.onclick = (e) => {
-  if (e.target === el.modal) closeModal();
+  if (e.target === el.modal) closeModal(false);
 };
 
 function sortHandForDisplay(hand, trump = null) {
@@ -129,13 +137,19 @@ function renderScoreboard() {
   el.scoreboard.textContent = `${n[0]} + ${n[2]}: ${state.scores[0]} | ${n[1]} + ${n[3]}: ${state.scores[1]}`;
 }
 
+function seatTitle(i, n) {
+  const note = state.seatNotes?.[i];
+  if (!note) return `<strong>${n[i]}</strong>`;
+  return `<strong>${n[i]}</strong> <span class="seat-note">${note}</span>`;
+}
+
 function renderPlayers() {
   const n = state.names;
   const back = `<img class="card-back" src="assets/cards/back.svg" alt="back" />`;
 
-  el.p1.innerHTML = `<strong>${n[1]}</strong><div>${state.players[1].length} cards</div><div class="backs">${back}</div>`;
-  el.p2.innerHTML = `<strong>${n[2]}</strong><div>${state.players[2].length} cards</div><div class="backs">${back}</div>`;
-  el.p3.innerHTML = `<strong>${n[3]}</strong><div>${state.players[3].length} cards</div><div class="backs">${back}</div>`;
+  el.p1.innerHTML = `${seatTitle(1, n)}<div>${state.players[1].length} cards</div><div class="backs">${back}</div>`;
+  el.p2.innerHTML = `${seatTitle(2, n)}<div>${state.players[2].length} cards</div><div class="backs">${back}</div>`;
+  el.p3.innerHTML = `${seatTitle(3, n)}<div>${state.players[3].length} cards</div><div class="backs">${back}</div>`;
 
   const groups = sortHandForDisplay(state.players[0], state.trump);
   const handHtml = groups
@@ -152,7 +166,7 @@ function renderPlayers() {
     })
     .join("");
 
-  el.p0.innerHTML = `<strong>${n[0]}</strong><div class="hand-groups">${handHtml || '<div class="muted">No cards</div>'}</div>`;
+  el.p0.innerHTML = `${seatTitle(0, n)}<div class="hand-groups">${handHtml || '<div class="muted">No cards</div>'}</div>`;
 }
 
 function renderTrick() {
@@ -191,7 +205,7 @@ function render() {
 function showMultiplayerCoincheModal(gs) {
   const c = gs?.coinche || {};
   const isContreeStage = c.stage === "contree";
-  openModal(isContreeStage ? "Contree Decision" : "Surcontree Decision", `Multiplier x${c.multiplier || 1}`);
+  openModal(isContreeStage ? "Contree Decision" : "Surcontree Decision", `Multiplier x${c.multiplier || 1}`, { lock: true });
 
   const wrap = document.createElement("div");
   wrap.className = "suit-row";
@@ -201,7 +215,7 @@ function showMultiplayerCoincheModal(gs) {
   passBtn.textContent = isContreeStage ? "No Contree" : "No Surcontree";
   passBtn.onclick = () => {
     window.__mp?.socket?.emit("game:coinche-action", { action: "pass" }, (res) => {
-      if (res?.ok) closeModal();
+      if (res?.ok) closeModal(true);
       else window.__mp?.setStatus?.(`Coinche error: ${res?.error || "unknown"}`);
     });
   };
@@ -211,7 +225,7 @@ function showMultiplayerCoincheModal(gs) {
   yesBtn.textContent = isContreeStage ? "Contree x2" : "Surcontree x4";
   yesBtn.onclick = () => {
     window.__mp?.socket?.emit("game:coinche-action", { action: isContreeStage ? "contree" : "surcontree" }, (res) => {
-      if (res?.ok) closeModal();
+      if (res?.ok) closeModal(true);
       else window.__mp?.setStatus?.(`Coinche error: ${res?.error || "unknown"}`);
     });
   };
@@ -223,7 +237,7 @@ function showMultiplayerCoincheModal(gs) {
 function showMultiplayerBidModal(gs) {
   const bState = gs?.bidding || {};
   const high = bState.highestBid;
-  openModal("Your Bid", `Current high: ${high ? `${high.value} ${high.suit}` : "none"}`);
+  openModal("Your Bid", `Current high: ${high ? `${high.value} ${high.suit}` : "none"}`, { lock: true });
 
   const minBid = high ? high.value + 10 : 90;
   const maxBid = 160;
@@ -281,7 +295,7 @@ function showMultiplayerBidModal(gs) {
   passBtn.textContent = "Pass";
   passBtn.onclick = () => {
     window.__mp?.socket?.emit("game:bid-action", { action: "pass" }, (res) => {
-      if (res?.ok) closeModal();
+      if (res?.ok) closeModal(true);
       else window.__mp?.setStatus?.(`Bid error: ${res?.error || "unknown"}`);
     });
   };
@@ -296,7 +310,7 @@ function showMultiplayerBidModal(gs) {
       value: Number(slider.value),
       suit: selectedSuit,
     }, (res) => {
-      if (res?.ok) closeModal();
+      if (res?.ok) closeModal(true);
       else window.__mp?.setStatus?.(`Bid error: ${res?.error || "unknown"}`);
     });
   };
@@ -306,7 +320,7 @@ function showMultiplayerBidModal(gs) {
   kabBtn.textContent = "Kabbout";
   kabBtn.onclick = () => {
     window.__mp?.socket?.emit("game:bid-action", { action: "kabbout", suit: selectedSuit }, (res) => {
-      if (res?.ok) closeModal();
+      if (res?.ok) closeModal(true);
       else window.__mp?.setStatus?.(`Bid error: ${res?.error || "unknown"}`);
     });
   };
@@ -326,6 +340,7 @@ window.syncFromMultiplayer = function syncFromMultiplayer(gs) {
   state.trickNo = (gs.trickCount || 0) + 1;
   state.trick = (gs.trick || []).map((t) => ({ player: t.seat, card: t.card }));
   state.scores = gs.scores || state.scores;
+  state.seatNotes = gs.seatNotes || state.seatNotes;
 
   state.players[0] = [...(gs.yourHand || [])].map((c, i) => ({ ...c, __idx: i }));
   state.players[1] = new Array(gs.handCounts?.[1] || 0).fill({ suit: "♣", rank: "7", id: "x" });
@@ -335,7 +350,7 @@ window.syncFromMultiplayer = function syncFromMultiplayer(gs) {
   render();
 
   if (state.phase === "play") {
-    closeModal();
+    closeModal(true);
     state.lastMpBidPromptKey = null;
     return;
   }
@@ -344,7 +359,7 @@ window.syncFromMultiplayer = function syncFromMultiplayer(gs) {
     const c = gs.coinche || {};
     const myTurn = gs.turnSeat === gs.yourSeat;
     if (!myTurn) {
-      closeModal();
+      closeModal(true);
       return;
     }
     const key = `coinche-${c.stage || "-"}-${c.multiplier || 1}-${gs.turnSeat}`;
@@ -361,7 +376,7 @@ window.syncFromMultiplayer = function syncFromMultiplayer(gs) {
     const myTurn = b.currentSeat === mySeat;
 
     if (!myTurn) {
-      closeModal();
+      closeModal(true);
       return;
     }
 

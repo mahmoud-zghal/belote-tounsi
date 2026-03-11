@@ -40,6 +40,7 @@ export function createInitialGame() {
       allPassCount: 0,
     },
     coinche: null,
+    seatNotes: ["", "", "", ""],
     trickHistory: [],
     roundPoints: [0, 0],
     roundScore: [0, 0],
@@ -112,6 +113,7 @@ export function placeBid(game, seat, payload) {
 
   const action = payload?.action;
   if (action === "pass") {
+    g.seatNotes[seat] = "Pass";
     if (g.bidding.highestBid) g.bidding.passesAfterBid += 1;
     g.bidding.allPassCount += 1;
 
@@ -122,6 +124,7 @@ export function placeBid(game, seat, payload) {
       g.bidding.currentSeat = (g.bidding.currentSeat + 1) % 4;
       g.turnSeat = g.bidding.currentSeat;
       g.bidding.allPassCount = 0;
+      g.seatNotes = ["", "", "", ""];
       return { ok: true, type: "redeal" };
     }
 
@@ -164,6 +167,7 @@ export function placeBid(game, seat, payload) {
     if (value < min) return { ok: false, error: "BID_TOO_LOW" };
 
     g.bidding.highestBid = { value, suit, by: seat, kabbout: false };
+    g.seatNotes[seat] = `${value}${suit}`;
     g.bidding.passesAfterBid = 0;
     g.bidding.allPassCount = 0;
     advanceBidTurn(g);
@@ -174,6 +178,7 @@ export function placeBid(game, seat, payload) {
     const suit = payload?.suit;
     if (!SUITS.includes(suit)) return { ok: false, error: "BAD_SUIT" };
     g.bidding.highestBid = { value: 500, suit, by: seat, kabbout: true };
+    g.seatNotes[seat] = `Kabbout ${suit}`;
     g.contract = g.bidding.highestBid;
     g.trump = suit;
     g.phase = "play";
@@ -196,6 +201,7 @@ export function coincheAction(game, seat, payload) {
     if (!c.defenders.includes(seat)) return { ok: false, error: "NOT_DEFENDER" };
 
     if (action === "contree") {
+      g.seatNotes[seat] = "Contree";
       c.multiplier = 2;
       c.stage = "surcontree";
       c.idx = 0;
@@ -203,6 +209,7 @@ export function coincheAction(game, seat, payload) {
       return { ok: true, type: "contree" };
     }
 
+    g.seatNotes[seat] = "No contree";
     c.idx += 1;
     if (c.idx >= c.defenders.length) {
       g.phase = "play";
@@ -218,6 +225,7 @@ export function coincheAction(game, seat, payload) {
     if (!c.takers.includes(seat)) return { ok: false, error: "NOT_TAKER" };
 
     if (action === "surcontree") {
+      g.seatNotes[seat] = "Surcontree";
       c.multiplier = 4;
       g.phase = "play";
       g.turnSeat = g.contract.by;
@@ -225,6 +233,7 @@ export function coincheAction(game, seat, payload) {
       return { ok: true, type: "surcontree" };
     }
 
+    g.seatNotes[seat] = "No surcontree";
     c.idx += 1;
     if (c.idx >= c.takers.length) {
       g.phase = "play";
