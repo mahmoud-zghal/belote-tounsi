@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { nanoid } from "nanoid";
@@ -452,6 +454,12 @@ io.on("connection", (socket) => {
     disconnectTimers.set(timerKey(roomCode, seat), t);
   });
 });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const webRoot = path.resolve(__dirname, "../../");
+app.use(express.static(webRoot));
+app.get("*", (_, res) => res.sendFile(path.join(webRoot, "index.html")));
 
 const PORT = process.env.PORT || 8787;
 httpServer.listen(PORT, () => console.log(`Belote server running on :${PORT}`));

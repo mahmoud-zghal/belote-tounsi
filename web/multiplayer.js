@@ -12,7 +12,7 @@
 
   if (!statusEl || typeof io === "undefined") return;
 
-  const SERVER_URL = `${location.protocol}//${location.hostname}:8787`;
+  const SERVER_URL = `${location.protocol}//${location.host}`;
   const socket = io(SERVER_URL, { autoConnect: true });
 
   const tabKey = sessionStorage.getItem("mp_tab_key") || crypto.randomUUID();
