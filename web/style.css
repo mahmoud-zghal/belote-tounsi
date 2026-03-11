@@ -69,8 +69,9 @@ h1 { margin: 0; font-size: 1.8rem; letter-spacing: .4px; }
 .player { text-align: center; min-height: 90px; }
 .you { margin-top: 18px; }
 .hand { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; }
-.hand-groups { display: grid; gap: 8px; margin-top: 10px; }
-.suit-group { display: grid; gap: 6px; }
+.hand-groups { display: flex; gap: 12px; margin-top: 10px; justify-content: center; flex-wrap: wrap; align-items: flex-start; }
+.suit-group { display: flex; flex-direction: column; gap: 6px; min-width: 88px; }
+.suit-group .hand { justify-content: flex-start; margin-top: 0; }
 .suit-label { font-weight: 800; font-size: .9rem; opacity: .95; }
 .suit-group.suit-red .suit-label { color: #ffb1b1; }
 .suit-group.suit-black .suit-label { color: #d8ecff; }
